@@ -4,17 +4,17 @@ const jwt = require("jsonwebtoken");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 
+const { User } = require("./sequelize");
+
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-
-const users = []; // قاعدة بيانات مؤقتة
 
 // تسجيل الدخول
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  const user = users.find((user) => user.email === email);
+  const user = await User.findOne({ where: { email } }); // البحث عن المستخدم في قاعدة البيانات
   if (!user) {
     return res.status(404).json({ message: "المستخدم غير موجود." });
   }
@@ -35,20 +35,29 @@ app.post("/register", async (req, res) => {
   const { firstName, lastName, email, password, phoneNumber } = req.body;
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const user = { id: users.length + 1, firstName, lastName, email, password: hashedPassword, phoneNumber };
-  users.push(user);
+  try {
+    // eslint-disable-next-line no-unused-vars
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      phoneNumber,
+    });
 
-  res.status(201).json({ message: "تم إنشاء الحساب بنجاح." });
+    res.status(201).json({ message: "تم إنشاء الحساب بنجاح." });
+  } catch (error) {
+    res.status(500).json({ message: "حدث خطأ أثناء إنشاء الحساب.", error });
+  }
 });
 
 // تسجيل الدخول باستخدام Google
-app.post("/google-login", (req, res) => {
+app.post("/google-login", async (req, res) => {
   const { email, name } = req.body;
 
-  let user = users.find((user) => user.email === email);
+  let user = await User.findOne({ where: { email } });
   if (!user) {
-    user = { id: users.length + 1, email, name };
-    users.push(user);
+    user = await User.create({ email, name });
   }
 
   const token = jwt.sign({ id: user.id, email: user.email }, "secret", {
@@ -58,7 +67,7 @@ app.post("/google-login", (req, res) => {
 });
 
 // بدء الخادم
-const PORT = 3000;
+const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

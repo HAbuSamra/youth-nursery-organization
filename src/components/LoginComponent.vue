@@ -133,7 +133,13 @@ export default {
 
         if (response && response.data) {
           const token = response.data.token;
-          localStorage.setItem("authToken", token);
+
+          // إذا كان المستخدم قد اختار تذكرني، سيتم حفظ التوكن لفترة أطول
+          if (this.rememberMe) {
+            localStorage.setItem("authToken", token);
+          } else {
+            sessionStorage.setItem("authToken", token);
+          }
 
           alert("تم تسجيل الدخول بنجاح!");
           this.$emit("loginSuccess");
@@ -143,7 +149,6 @@ export default {
       } catch (error) {
         console.error("تفاصيل الخطأ:", error);
 
-        // عرض رسالة الخطأ بشكل مناسب
         if (
           error.response &&
           error.response.data &&
@@ -155,12 +160,11 @@ export default {
         }
       }
     },
-
     async handleGoogleLogin() {
       try {
         const response = await apiClient.post("/google-login", {
-          email: "example@gmail.com", // بيانات من Google API
-          name: "Google User", // بيانات من Google API
+          email: this.email, // يتم جلبها من Google API
+          name: this.firstName, // يتم جلبها من Google API
         });
 
         if (response && response.data) {
@@ -192,6 +196,11 @@ export default {
         return;
       }
 
+      if (this.password.length < 6) {
+        alert("كلمة المرور يجب أن تكون أطول من 6 أحرف.");
+        return;
+      }
+
       try {
         const response = await apiClient.post("/register", {
           firstName: this.firstName,
@@ -210,7 +219,6 @@ export default {
       } catch (error) {
         console.error("خطأ أثناء التسجيل:", error);
 
-        // عرض رسالة الخطأ بشكل مناسب
         if (
           error.response &&
           error.response.data &&
@@ -222,7 +230,6 @@ export default {
         }
       }
     },
-
     enterAsGuest() {
       alert("تم الدخول كزائر");
       this.$emit("loginSuccess");
